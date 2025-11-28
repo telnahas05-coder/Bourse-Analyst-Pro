@@ -1,0 +1,5 @@
+{
+  "name": "Bourse Analyst Pro",
+  "description": "An AI-powered financial analyzer for Iranian Stock Market symbols (TSE), integrating data analysis from Codal, TSETMC, and Fipiran with regulatory compliance checks.",
+  "requestFramePermissions": []
+}
