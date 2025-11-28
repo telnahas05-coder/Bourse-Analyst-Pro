@@ -7,16 +7,16 @@ export const analyzeSymbol = async (symbol: string): Promise<FinancialReport> =>
 
   const ai = new GoogleGenAI({ apiKey });
 
-  // Define the structure we want as a plain object to stringify for the prompt
-  // This avoids the API error when combining tools + responseSchema
+  // Define target structure for JSON parsing
   const targetStructure = {
-    symbol: "String (e.g., فولاد)",
+    symbol: "String",
     companyName: "String",
+    entityType: "Fund | Company",
     lastUpdate: "String (Persian Date)",
     financials: {
-      reportType: "String (e.g., 6 Month Audited)",
+      reportType: "String (e.g., 6 Month Audited / Monthly Activity)",
       auditOpinion: "String (e.g., Maqbool, Mashroot)",
-      auditorNotes: ["String (List of key 'Bande Shart' from auditor)"],
+      auditorNotes: ["String (CRITICAL: Extract specific 'Bande Shart' regarding violations, liquidity, or fraud)"],
       profitability: {
         netProfit: "String",
         eps: "String",
@@ -25,15 +25,15 @@ export const analyzeSymbol = async (symbol: string): Promise<FinancialReport> =>
       balanceSheetHighlights: ["String"]
     },
     analysis: {
-      profitDrivers: ["String (Best items leading to profit)"],
-      lossDrivers: ["String (Items leading to loss/risk)"],
+      profitDrivers: ["String (Best performing items/products)"],
+      lossDrivers: ["String (Loss making items/risks)"],
       keyInvestmentPoints: ["String"]
     },
     compliance: {
-      portfolioMatch: 0, // Number 0-100
-      violations: ["String (List violations of Omidnameh/Statutes)"],
+      portfolioMatch: 0, // Number 0-100 (Use -1 for Companies)
+      violations: ["String (Omidnameh violations OR Regulatory issues)"],
       adherenceNotes: ["String"],
-      assetAllocation: [{ name: "String", value: 0 }]
+      assetAllocation: [{ name: "String", value: 0 }] // Assets for Funds, Product Mix for Companies
     },
     marketBoard: {
       lastPrice: "String",
@@ -43,51 +43,70 @@ export const analyzeSymbol = async (symbol: string): Promise<FinancialReport> =>
       volumeStatus: "High | Normal | Low",
       institutionalBuy: "String (%)",
       institutionalSell: "String (%)",
-      flowAnalysis: "String (Analysis of Haghighi/Hoghooghi moves)"
+      flowAnalysis: "String (Haghighi/Hoghooghi Analysis)"
     },
     technical: {
-      support: "String (Price level)",
-      resistance: "String (Price level)",
+      support: "String",
+      resistance: "String",
       trend: "Bullish | Bearish | Neutral",
-      volumeAnalysis: "String"
+      volumeAnalysis: "String",
+      movingAverages: {
+        status: "Bullish | Bearish | Neutral",
+        details: "String (e.g. Price above SMA50, Golden Cross)"
+      },
+      candlestickPatterns: ["String (e.g. Hammer, Doji, Engulfing)"]
     },
     summary: {
-      investmentVerdict: "String (Final conclusion)",
-      strengths: ["String (Key strengths of the symbol)"]
+      investmentVerdict: "String",
+      strengths: ["String"]
     },
     checklist: [
       {
-        item: "String (Action taken, e.g., 'Checked Codal')",
+        item: "String",
         status: "Checked | Warning | Failed",
-        detail: "String (Result of check)"
+        detail: "String"
       }
     ]
   };
 
   const prompt = `
-    Act as a professional senior financial analyst for the Iranian Stock Market (TSE).
-    Analyze the symbol: "${symbol}".
+    Act as a senior Iranian Stock Market (TSE) analyst. Analyze symbol: "${symbol}".
     
-    You MUST perform these steps using Google Search:
-    1.  **Codal.ir Analysis**: Find the latest financial statements (Audited preferred). 
-        -   Extract Net Profit, EPS, and Auditor Opinion.
-        -   IMPORTANT: If Audited, list specific Auditor Notes (Bande Shart).
-        -   Identify what caused the most Profit (profitDrivers) and Loss (lossDrivers).
-    2.  **Compliance Check**: Compare the latest Portfolio (Portfoy) or Operations against the Fund's Prospectus (Omidnameh) or Company Statutes.
-        -   Calculate a match percentage.
-        -   List any asset allocation violations.
-    3.  **TSETMC Market Analysis**: Check current price, volume vs monthly average, and Institutional/Individual (Haghighi/Hoghooghi) flow.
-    4.  **Technical Analysis**: Identify Support/Resistance based on volume clusters.
+    **PHASE 1: IDENTIFY TYPE**
+    Determine if this is a **FUND (ETF/Mutual)** or a **COMPANY (Sahami)**.
+    
+    **PHASE 2: EXECUTE RESEARCH (Use Google Search)**
+    
+    1.  **CODAL.IR (Financials - CRITICAL)**:
+        *   **AUDITOR CHECK**: Search for the latest **AUDITED** Financial Statement (Soorat Mali Hesabresi Shode).
+            *   **MUST EXTRACT**: Any "Bande Shart" (Qualifications) regarding:
+                *   Financial violations (Takhalofat).
+                *   Liquidity cycles (Charkhe Naghdinegi).
+                *   Regulatory non-compliance.
+            *   If the opinion is "Mashroot" or "Mardood", list the reasons clearly in 'auditorNotes'.
+        *   **IF FUND**: Search for "Omidnameh", "Asasnameh", and latest "Portfoy". Check asset limits vs Omidnameh.
+        *   **IF COMPANY**: Search for latest "Monthly Activity Report". Analyze Sales Mix (Best/Worst products).
+    
+    2.  **MARKET DATA (TSETMC)**:
+        *   Get Last Price, Volume, Monthly Avg Volume.
+        *   Analyze "Haghighi/Hoghooghi" (Individual/Institutional) buy/sell percentages.
+    
+    3.  **TECHNICAL ANALYSIS (Rahavard 365, Bourse24, Agah)**:
+        *   Identify Support/Resistance levels.
+        *   **INDICATORS**: Check Moving Averages (SMA 20, SMA 50). Is price above or below?
+        *   **PATTERNS**: Look for recent Candlestick patterns (e.g., Hammer, Doji, Engulfing, Head & Shoulders) on Daily timeframe.
+    
+    **PHASE 3: GENERATE REPORT (JSON)**
+    
+    Map findings to this logic:
+    *   **entityType**: 'Fund' or 'Company'.
+    *   **compliance.portfolioMatch**: Calculate for Funds (0-100). For Companies, put -1.
+    *   **technical**: Fill 'movingAverages' and 'candlestickPatterns' based on technical findings.
     
     **OUTPUT FORMAT**:
-    Return strictly valid JSON matching exactly the structure below. 
-    Do NOT use Markdown code blocks. 
-    Do NOT add any text before or after the JSON.
+    Return ONLY valid JSON matching this structure. No Markdown. All text must be in **PERSIAN (Farsi)**.
     
-    Target JSON Structure:
-    ${JSON.stringify(targetStructure, null, 2)}
-    
-    Ensure all text fields are in Persian (Farsi).
+    ${JSON.stringify(targetStructure)}
   `;
 
   try {
@@ -96,37 +115,40 @@ export const analyzeSymbol = async (symbol: string): Promise<FinancialReport> =>
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        // NOTE: responseMimeType: "application/json" is REMOVED to avoid conflict with tools
       }
     });
 
     let text = response.text;
     if (!text) throw new Error("Empty response from AI");
 
-    // Clean up potential markdown formatting (```json ... ```)
+    // Clean up potential markdown formatting
     text = text.replace(/^```json\s*/g, '').replace(/^```\s*/g, '').replace(/```$/g, '').trim();
     
     let data: FinancialReport;
     try {
         data = JSON.parse(text) as FinancialReport;
     } catch (e) {
-        console.error("Failed to parse JSON:", text);
-        throw new Error("Failed to generate valid report format. Please try again.");
+        // Fallback cleanup if JSON is dirty
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            data = JSON.parse(jsonMatch[0]) as FinancialReport;
+        } else {
+             throw new Error("Failed to parse analysis report.");
+        }
     }
     
-    // Add source chunks if available from search
+    // Process sources
     const grounding = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     if (grounding) {
         const links = (grounding as any[])
           .map((c: any) => c.web?.uri)
           .filter((uri: any): uri is string => typeof uri === 'string');
-        // Deduplicate links
         data.sources = [...new Set(links)];
     }
 
     return data;
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
-    throw error;
+    throw new Error("خطا در ارتباط با سرور تحلیل. لطفا مجدد تلاش کنید.");
   }
 };

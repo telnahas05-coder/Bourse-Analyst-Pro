@@ -60,9 +60,10 @@ const MarketAnalysis: React.FC<Props> = ({ data }) => {
         <div>
             <h3 className="text-lg font-bold text-bourse-accent mb-4 flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                تحلیل تکنیکال و سطوح حجمی
+                تحلیل تکنیکال پیشرفته
             </h3>
             
+            {/* Support/Resistance */}
             <div className="grid grid-cols-2 gap-4 mb-4">
                  <div className="bg-green-900/10 border border-green-800/40 p-3 rounded text-center">
                     <span className="text-green-500 text-xs block mb-1 font-bold">حمایت معتبر</span>
@@ -74,7 +75,37 @@ const MarketAnalysis: React.FC<Props> = ({ data }) => {
                  </div>
             </div>
 
-            <div className="mb-4 flex items-center justify-between bg-slate-800 p-2 rounded">
+            {/* Indicators & Patterns */}
+            <div className="bg-slate-800 rounded p-3 mb-4 space-y-3">
+                {/* Moving Averages */}
+                <div className="flex justify-between items-center border-b border-slate-700 pb-2">
+                    <span className="text-gray-400 text-xs">میانگین متحرک (Moving Avg):</span>
+                    <div className="flex items-center gap-2">
+                         <span className={`text-xs px-2 py-0.5 rounded ${data.technical.movingAverages.status === 'Bullish' ? 'bg-green-500/20 text-green-400' : data.technical.movingAverages.status === 'Bearish' ? 'bg-red-500/20 text-red-400' : 'bg-slate-600 text-gray-300'}`}>
+                            {data.technical.movingAverages.status === 'Bullish' ? 'صعودی' : data.technical.movingAverages.status === 'Bearish' ? 'نزولی' : 'خنثی'}
+                         </span>
+                         <span className="text-[10px] text-gray-500 truncate max-w-[120px]" title={data.technical.movingAverages.details}>{data.technical.movingAverages.details}</span>
+                    </div>
+                </div>
+
+                {/* Candlestick Patterns */}
+                <div>
+                     <span className="text-gray-400 text-xs block mb-2">الگوهای کندلی شناسایی شده:</span>
+                     <div className="flex flex-wrap gap-2">
+                        {data.technical.candlestickPatterns && data.technical.candlestickPatterns.length > 0 ? (
+                            data.technical.candlestickPatterns.map((pattern, idx) => (
+                                <span key={idx} className="bg-blue-900/30 text-blue-300 text-[10px] px-2 py-1 rounded border border-blue-800/50">
+                                    {pattern}
+                                </span>
+                            ))
+                        ) : (
+                            <span className="text-gray-500 text-[10px]">الگوی خاصی شناسایی نشد</span>
+                        )}
+                     </div>
+                </div>
+            </div>
+
+            <div className="mb-4 flex items-center justify-between">
                  <span className="text-gray-400 text-sm">روند کلی نمودار: </span>
                  <span className={`font-bold px-3 py-1 rounded text-sm ${data.technical.trend === 'Bullish' ? 'bg-green-900/30 text-bourse-green' : data.technical.trend === 'Bearish' ? 'bg-red-900/30 text-bourse-red' : 'bg-slate-700 text-gray-200'}`}>
                     {data.technical.trend === 'Bullish' ? 'صعودی ↗' : data.technical.trend === 'Bearish' ? 'نزولی ↘' : 'خنثی ↔'}
